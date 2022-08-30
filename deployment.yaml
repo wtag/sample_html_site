@@ -1,0 +1,95 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: sample-site
+  name: whoami
+  labels:
+    app: whoami
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: whoami
+  template:
+    metadata:
+      labels:
+        app: whoami
+    spec:
+      containers:
+        - name: whoami
+          image: eu.gcr.io/nodal-algebra-161404/sample_site:v1
+          ports:
+            - name: web
+              containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whoami
+  namespace: sample-site
+spec:
+  ports:
+    - protocol: TCP
+      name: web
+      port: 80
+  selector:
+    app: whoami
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: whoami-redirectscheme
+  namespace: sample-site
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+    port: "443"
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ingressroute
+  namespace: sample-site
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`test7.preview.welltravel.com`)
+      middlewares:
+        - name: whoami-redirectscheme
+      kind: Rule
+      services:
+        - name: whoami
+          port: 80
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: whoami-cert
+  namespace: sample-site
+spec:
+  commonName: test7.preview.welltravel.com
+  secretName: whoami-cert
+  dnsNames:
+    - test5.preview.welltravel.com
+  issuerRef:
+    name: letsencrypt-http01
+    kind: ClusterIssuer
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ingressroute-secure
+  namespace: sample-site
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`test7.preview.welltravel.com`)
+      kind: Rule
+      services:
+        - name: whoami
+          port: 80
+  tls:
+    secretName: whoami-cert
