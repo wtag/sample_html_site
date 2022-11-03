@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: whoami
-          image: eu.gcr.io/nodal-algebra-161404/sample_site:v1
+          image: eu.gcr.io/nodal-algebra-161404/sample_site:v9
           ports:
             - name: web
               containerPort: 80
